@@ -81,7 +81,8 @@ AS
   SELECT *
   FROM   trade_type;
 
---Running totals for stocks
+ 
+----------------------------------VIEW :Running totals for stocks----------------------- 
 CREATE OR replace VIEW stocks.robinhood_stocks_cumulative__vw
 AS
   WITH adjusted_numbers
@@ -128,7 +129,8 @@ AS
 
 select *
 from stocks.robinhood_stocks_cumulative__vw
-where instrument = 'AFRM';
+where instrument = 'AMZN';
+
 
 
 --Running totals for Options
@@ -137,36 +139,70 @@ select sum(amount) from stocks.robinhood_transformed_transactions__vw where trad
 select sum(amount),sum(quantity) from stocks.robinhood_transformed_transactions__vw where trade_type='stocks' and  instrument ='AFRM';
 select sum(amount)  from stocks.robinhood_raw_transactions where trans_code not in ('Buy','Sell','OEXP','SLIP') and  instrument ='AFRM'
 
---Aggregated value
-WITH options_net
-     AS (SELECT instrument,
-                Sum(amount) AS options_net_value
-         FROM   stocks.robinhood_transformed_transactions__vw
-         WHERE  trade_type = 'options'
-         GROUP  BY 1),
-     stocks_net_step0
-     AS (SELECT instrument,
-                CASE
-                  WHEN Lower(trans_code) = 'sell' THEN quantity * -1
-                  ELSE quantity
-                END AS quantity,
-                amount
-         FROM   stocks.robinhood_transformed_transactions__vw
-         WHERE  trade_type = 'stocks'),
-     stocks_net
-     AS (SELECT instrument,
-                Sum(amount)   AS stock_net_value,
-                Sum(quantity) AS net_quantity
-         FROM   stocks_net_step0
-         GROUP  BY 1)
-SELECT s.instrument,
-       ( stock_net_value + options_net_value )                    AS net_value,
-       net_quantity,
-       ( ( stock_net_value + options_net_value ) / net_quantity ) AS avg_price
-FROM   stocks_net s
-       JOIN options_net o
-         ON s.instrument = o.instrument
-WHERE  net_quantity > 0; 
+
+select * from get_aggregates_since1('2024-01-01','AMZN');
+
+select * from stocks.robinhood_transformed_transactions__vw;
+
+
+
+----------------------------------FUNCTION : GET AGGREAGTES SINCE A DATE. THIS RETURNS AGGS FOR STOCKS AND OPTIONS SEPERATELY-----------------------
+--DROP FUNCTION stocks.get_aggregates_since__F;
+CREATE OR REPLACE FUNCTION stocks.get_aggregates_since__F(
+    p_date DATE,
+    p_symbol VARCHAR
+)
+RETURNS TABLE (
+    instrument VARCHAR,
+    stock_net_value numeric,
+    stocks_net_quantity numeric,
+    options_net_value numeric
+) AS $$
+BEGIN
+    RETURN QUERY
+	    WITH options_net AS (
+	        SELECT r.instrument,
+	               SUM(r.amount) AS options_net_value
+	        FROM stocks.robinhood_transformed_transactions__vw r
+	        WHERE r.trade_type = 'options' 
+	          AND r.activity_date >= p_date
+	          AND r.instrument = p_symbol
+	        GROUP BY r.instrument
+	    )
+,
+    stocks_net_step0 AS (
+        SELECT s.instrument,
+               CASE
+                 WHEN LOWER(s.trans_code) = 'sell' THEN s.quantity * -1
+                 ELSE s.quantity
+               END AS quantity,
+               s.amount
+        FROM stocks.robinhood_transformed_transactions__vw s
+        WHERE s.trade_type = 'stocks'
+        	          AND s.activity_date >= p_date
+	          AND s.instrument = p_symbol
+    ) ,
+    stocks_net AS (
+        SELECT ss.instrument,
+               SUM(ss.amount) AS stock_net_value,
+               SUM(ss.quantity) AS net_quantity
+        FROM stocks_net_step0 ss
+        GROUP BY ss.instrument
+    )
+     SELECT s.instrument,
+           s.stock_net_value,
+           s.net_quantity as stocks_net_quantity,
+--           ((s.stock_net_value + o.options_net_value) / s.net_quantity) AS avg_price
+           o.options_net_value
+    FROM stocks_net s
+    JOIN options_net o ON s.instrument = o.instrument;
+END;
+$$ LANGUAGE plpgsql;
+
+select * from stocks.get_aggregates_since__F('2000-01-01','NKE')
+---------------------------------------------
+
+
 
 ---_______________VIEWS END____________---
 

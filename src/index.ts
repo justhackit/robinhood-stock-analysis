@@ -104,7 +104,7 @@ async function insertDataIntoDb(data: Transaction[], tableName: string) {
 
 // Usage exampl
 // const filePath = '/Users/ajayed/Downloads/Robinhood_transactions_20200101_to_20240517.csv';
-const filePath = './data/Robinhood_transactions_20180319_to_20191231.csv';
+const filePath = './data/Robinhood_transactions_20240517_to_20240525.csv';
 console.log('Current working directory:', process.cwd());
 
 type Transaction = {
