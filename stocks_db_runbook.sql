@@ -139,10 +139,7 @@ select sum(amount) from stocks.robinhood_transformed_transactions__vw where trad
 select sum(amount),sum(quantity) from stocks.robinhood_transformed_transactions__vw where trade_type='stocks' and  instrument ='AFRM';
 select sum(amount)  from stocks.robinhood_raw_transactions where trans_code not in ('Buy','Sell','OEXP','SLIP') and  instrument ='AFRM'
 
-
-select * from get_aggregates_since1('2024-01-01','AMZN');
-
-select * from stocks.robinhood_transformed_transactions__vw;
+-------------------END : robinhood_stocks_cumulative__vw---------------------------
 
 
 
