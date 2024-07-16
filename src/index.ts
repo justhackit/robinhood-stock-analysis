@@ -36,7 +36,7 @@ function readCsvFile(filePath: string): Promise<any[]> {
 }
 
 function convertToTransaction(row: any): Transaction {
-    // console.log(new Date(row[0]))
+    // console.log(row)
     return {
         activity_date: new Date(row[0]),
         process_date: new Date(row[1]),
@@ -104,7 +104,7 @@ async function insertDataIntoDb(data: Transaction[], tableName: string) {
 
 // Usage exampl
 // const filePath = '/Users/ajayed/Downloads/Robinhood_transactions_20200101_to_20240517.csv';
-const filePath = './data/Robinhood_transactions_20240517_to_20240525.csv';
+const filePath = './data/Robinhood_transactions_20240601_to_20240630.csv';
 console.log('Current working directory:', process.cwd());
 
 type Transaction = {
